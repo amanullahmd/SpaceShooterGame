@@ -50,6 +50,7 @@ export interface Bullet extends GameObject {
   damage: number;
   ownerId: string;
   bulletType: BulletType;
+  isPlayerBullet: boolean;
 }
 
 export interface PowerUp extends GameObject {
@@ -61,9 +62,10 @@ export interface PowerUp extends GameObject {
 export interface Explosion {
   id: string;
   position: Position;
-  size: number;
+  size: Size;
   duration: number;
   currentFrame: number;
+  animationProgress: number;
 }
 
 export enum WeaponType {
@@ -86,7 +88,10 @@ export enum BulletType {
   PLAYER_RAPID = 'playerRapid',
   PLAYER_LASER = 'playerLaser',
   ENEMY_BASIC = 'enemyBasic',
-  ENEMY_HEAVY = 'enemyHeavy'
+  ENEMY_HEAVY = 'enemyHeavy',
+  NORMAL = 'normal',
+  LASER = 'laser',
+  PLASMA = 'plasma'
 }
 
 export enum PowerUpType {

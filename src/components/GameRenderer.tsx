@@ -195,8 +195,37 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
         
       case 'boss':
         enemyColor = "#ff0088";
+        const bossRotation = animTime * 2;
+        const bossPulse = 0.9 + 0.1 * Math.sin(animTime * 3);
+        const energyField = 0.3 + 0.2 * Math.sin(animTime * 5);
+        const eyeGlow = 0.7 + 0.3 * Math.sin(animTime * 4);
         enemyShape = (
           <G>
+            {/* Energy field */}
+            <Rect
+              x={-size.width/2 - 8}
+              y={-size.height/2 - 8}
+              width={size.width + 16}
+              height={size.height + 16}
+              fill="none"
+              stroke={enemyColor}
+              strokeWidth="2"
+              opacity={energyField}
+              strokeDasharray="8,4"
+              transform={`rotate(${bossRotation * 180 / Math.PI})`}
+              rx="4"
+            />
+            {/* Outer glow */}
+            <Rect
+              x={-size.width/2 - 4}
+              y={-size.height/2 - 4}
+              width={size.width + 8}
+              height={size.height + 8}
+              fill={enemyColor}
+              opacity={bossPulse * 0.2}
+              rx="2"
+            />
+            {/* Main body */}
             <Rect
               x={-size.width/2}
               y={-size.height/2}
@@ -205,10 +234,68 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
               fill={enemyColor}
               stroke="#ffffff"
               strokeWidth="3"
+              opacity={damageFlash}
+              transform={`scale(${bossPulse})`}
             />
-            <Circle cx="-15" cy="-10" r="5" fill="#ffff00" />
-            <Circle cx="15" cy="-10" r="5" fill="#ffff00" />
-            <Rect x="-10" y="10" width="20" height="5" fill="#ffffff" />
+            {/* Animated eyes */}
+            <Circle 
+              cx="-15" 
+              cy="-10" 
+              r="5" 
+              fill="#ffff00" 
+              opacity={eyeGlow}
+            />
+            <Circle 
+              cx="15" 
+              cy="-10" 
+              r="5" 
+              fill="#ffff00" 
+              opacity={eyeGlow}
+            />
+            {/* Eye pupils that track */}
+            <Circle 
+              cx={-15 + Math.sin(animTime * 2) * 2} 
+              cy={-10 + Math.cos(animTime * 1.5) * 1} 
+              r="2" 
+              fill="#ff0000" 
+            />
+            <Circle 
+              cx={15 + Math.sin(animTime * 2) * 2} 
+              cy={-10 + Math.cos(animTime * 1.5) * 1} 
+              r="2" 
+              fill="#ff0000" 
+            />
+            {/* Animated mouth */}
+            <Rect 
+              x="-10" 
+              y="10" 
+              width={20 + Math.sin(animTime * 6) * 4} 
+              height="5" 
+              fill="#ffffff" 
+              opacity={damageFlash}
+            />
+            {/* Weapon systems */}
+            <G transform={`rotate(${-bossRotation * 90 / Math.PI})`}>
+              {[-1, 1].map((side, i) => (
+                <G key={`weapon_${i}`}>
+                  <Rect
+                    x={side * size.width/3}
+                    y="-2"
+                    width="8"
+                    height="4"
+                    fill="#ff4444"
+                    opacity={0.8 + 0.2 * Math.sin(animTime * 8 + i * Math.PI)}
+                  />
+                  <Circle
+                    cx={side * size.width/3 + 4}
+                    cy="0"
+                    r="2"
+                    fill="#ffffff"
+                    opacity={0.6 + 0.4 * Math.sin(animTime * 10 + i * Math.PI)}
+                  />
+                </G>
+              ))}
+            </G>
           </G>
         );
         break;
@@ -254,33 +341,154 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
   };
 
   const renderBullet = (bullet: Bullet, index: number) => {
-    const { position, size, bulletType } = bullet;
+    const { position, size, bulletType, isPlayerBullet } = bullet;
+    const animTime = (currentTime * 0.02 + index) % (Math.PI * 2);
+    const scale = bullet.scale || 1;
+    const opacity = bullet.opacity || 1;
     
-    let bulletColor = "#ffffff";
+    let bulletColor = isPlayerBullet ? "#00ff00" : "#ff0000";
     let bulletShape;
+    let trailEffect = [];
     
-    if (bulletType.startsWith('player')) {
-      bulletColor = "#00ffff";
-      bulletShape = (
-        <Rect
-          x={-size.width/2}
-          y={-size.height/2}
-          width={size.width}
-          height={size.height}
-          fill={bulletColor}
-          rx="2"
-        />
-      );
-    } else {
-      bulletColor = "#ff4400";
-      bulletShape = (
+    // Create trail effect
+    const trailLength = isPlayerBullet ? 5 : 3;
+    for (let i = 0; i < trailLength; i++) {
+      const trailOpacity = (1 - i / trailLength) * 0.4;
+      const trailY = i * (isPlayerBullet ? -3 : 3);
+      trailEffect.push(
         <Circle
+          key={`trail_${i}`}
           cx="0"
-          cy="0"
-          r={size.width/2}
+          cy={trailY}
+          r={size.width/2 * (1 - i * 0.1)}
           fill={bulletColor}
+          opacity={trailOpacity}
         />
       );
+    }
+    
+    switch (bulletType) {
+      case 'normal':
+        const normalPulse = 0.9 + 0.1 * Math.sin(animTime * 6);
+        bulletShape = (
+          <G>
+            {trailEffect}
+            <Rect
+              x={-size.width/2}
+              y={-size.height/2}
+              width={size.width}
+              height={size.height}
+              fill={bulletColor}
+              rx="2"
+              opacity={opacity}
+              transform={`scale(${normalPulse * scale})`}
+            />
+            {/* Core glow */}
+            <Rect
+              x={-size.width/4}
+              y={-size.height/4}
+              width={size.width/2}
+              height={size.height/2}
+              fill="#ffffff"
+              rx="1"
+              opacity={normalPulse * 0.6}
+            />
+          </G>
+        );
+        break;
+        
+      case 'laser':
+        const laserFlicker = 0.8 + 0.2 * Math.sin(animTime * 8);
+        bulletShape = (
+          <G>
+            {trailEffect}
+            {/* Outer glow */}
+            <Rect
+              x={-size.width/2 - 2}
+              y={-size.height/2 - 2}
+              width={size.width + 4}
+              height={size.height + 4}
+              fill={bulletColor}
+              opacity={laserFlicker * 0.3}
+            />
+            <Rect
+              x={-size.width/2}
+              y={-size.height/2}
+              width={size.width}
+              height={size.height}
+              fill={bulletColor}
+              stroke="#ffffff"
+              strokeWidth="1"
+              opacity={opacity * laserFlicker}
+              transform={`scale(${scale})`}
+            />
+          </G>
+        );
+        break;
+        
+      case 'plasma':
+        const plasmaPulse = 0.7 + 0.3 * Math.sin(animTime * 4);
+        const plasmaRotation = animTime * 3;
+        bulletShape = (
+          <G>
+            {trailEffect}
+            {/* Energy field */}
+            <Circle
+              cx="0"
+              cy="0"
+              r={size.width/2 + 3}
+              fill="none"
+              stroke={bulletColor}
+              strokeWidth="1"
+              opacity={plasmaPulse * 0.4}
+              strokeDasharray="2,2"
+              transform={`rotate(${plasmaRotation * 180 / Math.PI})`}
+            />
+            {/* Outer glow */}
+            <Circle
+              cx="0"
+              cy="0"
+              r={size.width/2 + 1}
+              fill={bulletColor}
+              opacity={plasmaPulse * 0.3}
+            />
+            <Circle
+              cx="0"
+              cy="0"
+              r={size.width/2}
+              fill={bulletColor}
+              stroke="#ffffff"
+              strokeWidth="1"
+              opacity={opacity}
+              transform={`scale(${plasmaPulse * scale})`}
+            />
+            {/* Core */}
+            <Circle
+              cx="0"
+              cy="0"
+              r={size.width/4}
+              fill="#ffffff"
+              opacity={plasmaPulse * 0.8}
+            />
+          </G>
+        );
+        break;
+        
+      default:
+        const defaultPulse = 0.8 + 0.2 * Math.sin(animTime * 5);
+        bulletShape = (
+          <G>
+            {trailEffect}
+            <Circle
+              cx="0"
+              cy="0"
+              r={size.width/2}
+              fill={bulletColor}
+              opacity={opacity * defaultPulse}
+              transform={`scale(${scale})`}
+            />
+          </G>
+        );
     }
     
     return (
@@ -301,82 +509,207 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
 
   const renderPowerUp = (powerUp: PowerUp, index: number) => {
     const { position, size, powerUpType } = powerUp;
+    const animTime = (currentTime * 0.015 + index) % (Math.PI * 2);
+    const scale = powerUp.scale || 1;
+    const opacity = powerUp.opacity || 1;
+    
+    // Floating animation
+    const floatY = Math.sin(animTime * 2) * 3;
+    const rotation = animTime * 30; // Slow rotation
+    const pulse = 0.8 + 0.2 * Math.sin(animTime * 4);
+    const glow = 0.3 + 0.2 * Math.sin(animTime * 6);
     
     let powerUpColor = "#ffff00";
     let powerUpIcon;
+    let glowEffect;
     
     switch (powerUpType) {
       case 'health':
         powerUpColor = "#00ff00";
-        powerUpIcon = (
+        glowEffect = (
           <G>
-            <Rect x="-2" y="-8" width="4" height="16" fill="#ffffff" />
-            <Rect x="-8" y="-2" width="16" height="4" fill="#ffffff" />
+            <Circle cx="0" cy="0" r="15" fill={powerUpColor} opacity={glow * 0.2} />
+            <Circle cx="0" cy="0" r="12" fill={powerUpColor} opacity={glow * 0.3} />
+          </G>
+        );
+        powerUpIcon = (
+          <G transform={`scale(${pulse * scale})`}>
+            <Rect x="-8" y="-2" width="16" height="4" fill="#ffffff" rx="2" />
+            <Rect x="-2" y="-8" width="4" height="16" fill="#ffffff" rx="2" />
+            {/* Inner glow */}
+            <Rect x="-6" y="-1" width="12" height="2" fill={powerUpColor} opacity="0.6" rx="1" />
+            <Rect x="-1" y="-6" width="2" height="12" fill={powerUpColor} opacity="0.6" rx="1" />
           </G>
         );
         break;
         
       case 'weaponUpgrade':
         powerUpColor = "#ff8800";
+        glowEffect = (
+          <G>
+            <Polygon points="0,-15 -12,12 12,12" fill={powerUpColor} opacity={glow * 0.2} />
+            <Polygon points="0,-12 -10,10 10,10" fill={powerUpColor} opacity={glow * 0.3} />
+          </G>
+        );
         powerUpIcon = (
-          <Polygon
-            points="0,-8 -6,8 6,8"
-            fill="#ffffff"
-          />
+          <G transform={`scale(${pulse * scale})`}>
+            <Polygon
+              points="0,-8 -6,8 6,8"
+              fill="#ffffff"
+            />
+            {/* Inner triangle */}
+            <Polygon
+              points="0,-4 -3,4 3,4"
+              fill={powerUpColor}
+              opacity="0.7"
+            />
+            {/* Sparkle effects */}
+            {[0, 120, 240].map((angle, i) => {
+              const x = Math.cos((angle + rotation) * Math.PI / 180) * 6;
+              const y = Math.sin((angle + rotation) * Math.PI / 180) * 6;
+              return (
+                <Circle
+                  key={`sparkle_${i}`}
+                  cx={x}
+                  cy={y}
+                  r="1"
+                  fill="#ffffff"
+                  opacity={0.5 + 0.5 * Math.sin(animTime * 8 + i)}
+                />
+              );
+            })}
+          </G>
         );
         break;
         
       case 'shield':
         powerUpColor = "#00ffff";
+        glowEffect = (
+          <G>
+            <Circle cx="0" cy="0" r="15" fill={powerUpColor} opacity={glow * 0.2} />
+            <Circle cx="0" cy="0" r="12" fill={powerUpColor} opacity={glow * 0.3} />
+          </G>
+        );
         powerUpIcon = (
-          <Circle
-            cx="0"
-            cy="0"
-            r="8"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="2"
-          />
+          <G transform={`scale(${pulse * scale})`}>
+            <Circle
+              cx="0"
+              cy="0"
+              r="10"
+              fill="none"
+              stroke={powerUpColor}
+              strokeWidth="2"
+              strokeDasharray="4,2"
+              transform={`rotate(${rotation})`}
+            />
+            <Circle
+              cx="0"
+              cy="0"
+              r="8"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="2"
+            />
+            <Circle
+              cx="0"
+              cy="0"
+              r="5"
+              fill={powerUpColor}
+              opacity="0.3"
+            />
+          </G>
         );
         break;
         
       case 'speedBoost':
         powerUpColor = "#ffff00";
-        powerUpIcon = (
+        glowEffect = (
           <G>
+            <Polygon points="-12,0 0,-12 12,0 0,12" fill={powerUpColor} opacity={glow * 0.2} />
+            <Polygon points="-10,0 0,-10 10,0 0,10" fill={powerUpColor} opacity={glow * 0.3} />
+          </G>
+        );
+        powerUpIcon = (
+          <G transform={`scale(${pulse * scale}) rotate(${rotation})`}>
             <Polygon points="-8,0 0,-8 8,0 0,8" fill="#ffffff" />
             <Polygon points="-4,0 0,-4 4,0 0,4" fill={powerUpColor} />
+            {/* Speed lines */}
+            {[-1, 1].map((dir, i) => (
+              <G key={`speed_line_${i}`}>
+                <Rect
+                  x={dir * 12}
+                  y="-1"
+                  width="4"
+                  height="2"
+                  fill={powerUpColor}
+                  opacity={0.6 + 0.4 * Math.sin(animTime * 10 + i * Math.PI)}
+                />
+                <Rect
+                  x={dir * 16}
+                  y="-0.5"
+                  width="2"
+                  height="1"
+                  fill={powerUpColor}
+                  opacity={0.4 + 0.4 * Math.sin(animTime * 12 + i * Math.PI)}
+                />
+              </G>
+            ))}
           </G>
         );
         break;
         
       case 'scoreMultiplier':
         powerUpColor = "#ff00ff";
-        powerUpIcon = (
+        glowEffect = (
           <G>
+            <Circle cx="0" cy="0" r="15" fill={powerUpColor} opacity={glow * 0.2} />
+            <Circle cx="0" cy="0" r="12" fill={powerUpColor} opacity={glow * 0.3} />
+          </G>
+        );
+        powerUpIcon = (
+          <G transform={`scale(${pulse * scale})`}>
             <Circle cx="0" cy="0" r="8" fill="none" stroke="#ffffff" strokeWidth="2" />
             <Rect x="-1" y="-6" width="2" height="8" fill="#ffffff" />
             <Rect x="-1" y="2" width="2" height="2" fill="#ffffff" />
+            {/* Coin-like ridges */}
+            {[...Array(8)].map((_, i) => {
+              const angle = (i * 45 + rotation) * Math.PI / 180;
+              const x1 = Math.cos(angle) * 7;
+              const y1 = Math.sin(angle) * 7;
+              const x2 = Math.cos(angle) * 9;
+              const y2 = Math.sin(angle) * 9;
+              return (
+                <Rect
+                  key={`ridge_${i}`}
+                  x={x1}
+                  y={y1}
+                  width="1"
+                  height="2"
+                  fill="#ffffff"
+                  opacity="0.5"
+                  transform={`rotate(${angle * 180 / Math.PI})`}
+                />
+              );
+            })}
           </G>
         );
         break;
         
       default:
+        glowEffect = (
+          <Circle cx="0" cy="0" r="12" fill={powerUpColor} opacity={glow * 0.3} />
+        );
         powerUpIcon = (
-          <Circle cx="0" cy="0" r="6" fill="#ffffff" />
+          <G transform={`scale(${pulse * scale})`}>
+            <Circle cx="0" cy="0" r="6" fill="#ffffff" />
+          </G>
         );
     }
     
     return (
-      <G key={`powerup_${powerUp.id}`} transform={`translate(${position.x}, ${position.y})`}>
-        {/* Outer glow */}
-        <Circle
-          cx="0"
-          cy="0"
-          r={size.width/2 + 5}
-          fill={powerUpColor}
-          opacity="0.3"
-        />
+      <G key={`powerup_${powerUp.id}`} transform={`translate(${position.x}, ${position.y + floatY})`}>
+        {/* Glow effects */}
+        {glowEffect}
         
         {/* Main power-up body */}
         <Circle
@@ -386,6 +719,8 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
           fill={powerUpColor}
           stroke="#ffffff"
           strokeWidth="1"
+          opacity={opacity}
+          transform={`scale(${pulse})`}
         />
         
         {/* Icon */}
@@ -395,39 +730,122 @@ export const GameRenderer: React.FC<GameRendererProps> = ({ gameState }) => {
   };
 
   const renderExplosion = (explosion: Explosion, index: number) => {
-    const { position, size, duration, currentFrame } = explosion;
-    const progress = currentFrame / duration;
-    const explosionSize = size * (1 + progress * 2);
-    const opacity = 1 - progress;
+    const { position, size, animationProgress } = explosion;
+    const opacity = 1 - animationProgress;
+    const scale = 0.3 + animationProgress * 2;
+    const animTime = (currentTime * 0.05 + index) % (Math.PI * 2);
+    
+    // Create multiple explosion rings with different timings
+    const rings = [];
+    const numRings = 4;
+    
+    for (let i = 0; i < numRings; i++) {
+      const ringProgress = Math.max(0, Math.min(1, (animationProgress * numRings) - i));
+      const ringOpacity = (1 - ringProgress) * opacity;
+      const ringScale = 0.2 + ringProgress * (1.5 + i * 0.3);
+      
+      if (ringOpacity > 0) {
+        const colors = ["#ff0000", "#ff4400", "#ff8800", "#ffff00"];
+        rings.push(
+          <Circle
+            key={`ring_${i}`}
+            cx="0"
+            cy="0"
+            r={(size.width/2) * ringScale}
+            fill={colors[i]}
+            opacity={ringOpacity}
+          />
+        );
+      }
+    }
+    
+    // Create particle effects
+    const particles = [];
+    const numParticles = 12;
+    
+    for (let i = 0; i < numParticles; i++) {
+      const angle = (i / numParticles) * Math.PI * 2;
+      const distance = animationProgress * size.width * (0.8 + Math.sin(animTime + i) * 0.3);
+      const particleX = Math.cos(angle) * distance;
+      const particleY = Math.sin(angle) * distance;
+      const particleOpacity = (1 - animationProgress) * (0.6 + 0.4 * Math.sin(animTime * 3 + i));
+      const particleSize = (1 - animationProgress) * (2 + Math.sin(animTime * 5 + i) * 1);
+      
+      if (particleOpacity > 0 && particleSize > 0) {
+        particles.push(
+          <Circle
+            key={`particle_${i}`}
+            cx={particleX}
+            cy={particleY}
+            r={particleSize}
+            fill={i % 3 === 0 ? "#ffffff" : i % 3 === 1 ? "#ffff00" : "#ff8800"}
+            opacity={particleOpacity}
+          />
+        );
+      }
+    }
+    
+    // Create shockwave effect
+    const shockwaveOpacity = Math.max(0, (1 - animationProgress * 2) * opacity);
+    const shockwaveRadius = animationProgress * size.width * 1.5;
     
     return (
-      <G key={`explosion_${explosion.id}`} transform={`translate(${position.x}, ${position.y})`}>
-        {/* Outer explosion ring */}
-        <Circle
-          cx="0"
-          cy="0"
-          r={explosionSize}
-          fill="#ff4400"
-          opacity={opacity * 0.6}
-        />
+      <G key={`explosion_${explosion.id}`} transform={`translate(${position.x}, ${position.y}) scale(${scale})`}>
+        {/* Shockwave */}
+        {shockwaveOpacity > 0 && (
+          <Circle
+            cx="0"
+            cy="0"
+            r={shockwaveRadius}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="2"
+            opacity={shockwaveOpacity}
+          />
+        )}
         
-        {/* Inner explosion core */}
-        <Circle
-          cx="0"
-          cy="0"
-          r={explosionSize * 0.6}
-          fill="#ffff00"
-          opacity={opacity * 0.8}
-        />
+        {/* Main explosion rings */}
+        {rings}
         
-        {/* Center bright spot */}
+        {/* Core flash */}
         <Circle
           cx="0"
           cy="0"
-          r={explosionSize * 0.3}
+          r={size.width/6}
           fill="#ffffff"
-          opacity={opacity}
+          opacity={opacity * (0.8 + 0.2 * Math.sin(animTime * 10))}
         />
+        
+        {/* Particles */}
+        {particles}
+        
+        {/* Additional sparks */}
+        {[...Array(6)].map((_, i) => {
+          const sparkAngle = (i / 6) * Math.PI * 2 + animTime;
+          const sparkDistance = animationProgress * size.width * 0.6;
+          const sparkX = Math.cos(sparkAngle) * sparkDistance;
+          const sparkY = Math.sin(sparkAngle) * sparkDistance;
+          const sparkOpacity = (1 - animationProgress) * 0.8;
+          
+          return sparkOpacity > 0 ? (
+            <G key={`spark_${i}`}>
+              <Circle
+                cx={sparkX}
+                cy={sparkY}
+                r="1"
+                fill="#ffffff"
+                opacity={sparkOpacity}
+              />
+              <Circle
+                cx={sparkX * 1.2}
+                cy={sparkY * 1.2}
+                r="0.5"
+                fill="#ffff00"
+                opacity={sparkOpacity * 0.7}
+              />
+            </G>
+          ) : null;
+        })}
       </G>
     );
   };

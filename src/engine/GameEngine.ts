@@ -132,6 +132,7 @@ export class GameEngine {
   }
 
   private createBullet(position: Position, velocity: Velocity, ownerId: string, bulletType: string): Bullet {
+    const isPlayerBullet = this.gameState.players.some(player => player.id === ownerId);
     return {
       id: `bullet_${Date.now()}_${Math.random()}`,
       position: { ...position },
@@ -143,7 +144,8 @@ export class GameEngine {
       isActive: true,
       damage: 10,
       ownerId,
-      bulletType: bulletType as any
+      bulletType: bulletType as any,
+      isPlayerBullet
     };
   }
 
@@ -311,9 +313,10 @@ export class GameEngine {
     const explosion: Explosion = {
       id: `explosion_${Date.now()}_${Math.random()}`,
       position: { ...position },
-      size,
+      size: { width: size, height: size },
       duration: 500, // 500ms
-      currentFrame: 0
+      currentFrame: 0,
+      animationProgress: 0
     };
     this.gameState.explosions.push(explosion);
   }
@@ -321,6 +324,7 @@ export class GameEngine {
   private updateExplosions(deltaTime: number): void {
     this.gameState.explosions = this.gameState.explosions.filter(explosion => {
       explosion.currentFrame += deltaTime;
+      explosion.animationProgress = Math.min(explosion.currentFrame / explosion.duration, 1);
       return explosion.currentFrame < explosion.duration;
     });
   }

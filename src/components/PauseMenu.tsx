@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -16,6 +17,7 @@ interface PauseMenuProps {
   onRestart: () => void;
   onMainMenu: () => void;
   onSettings: () => void;
+  onQuit?: () => void;
   isMultiplayer: boolean;
   gameStats?: {
     score: number;
@@ -33,6 +35,7 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
   onRestart,
   onMainMenu,
   onSettings,
+  onQuit,
   isMultiplayer,
   gameStats,
 }) => {
@@ -74,13 +77,24 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
     );
   };
 
+  const handleQuitPress = () => {
+    Alert.alert(
+      'Quit Game',
+      'Are you sure you want to quit the current game? Your progress will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Quit', style: 'destructive', onPress: onQuit },
+      ]
+    );
+  };
+
   const renderStarfield = () => {
     const stars = [];
     for (let i = 0; i < 50; i++) {
-      const x = Math.random() * screenWidth;
-      const y = Math.random() * screenHeight;
-      const size = Math.random() * 2 + 1;
-      const opacity = Math.random() * 0.6 + 0.2;
+      const left = Math.random() * screenWidth;
+      const top = Math.random() * screenHeight;
+      const size = Math.random() * 3 + 1;
+      const opacity = Math.random() * 0.8 + 0.2;
       
       stars.push(
         <View
@@ -88,8 +102,8 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
           style={[
             styles.star,
             {
-              left: x,
-              top: y,
+              left,
+              top,
               width: size,
               height: size,
               opacity,
@@ -185,6 +199,20 @@ export const PauseMenu: React.FC<PauseMenuProps> = ({
                 <Text style={styles.menuButtonText}>🏠 Main Menu</Text>
               </LinearGradient>
             </TouchableOpacity>
+            
+            {onQuit && (
+               <TouchableOpacity
+                 style={styles.menuButton}
+                 onPress={handleQuitPress}
+               >
+                 <LinearGradient
+                   colors={['#ff4444', '#aa2222']}
+                   style={styles.buttonGradient}
+                 >
+                   <Text style={styles.menuButtonText}>❌ Quit Game</Text>
+                 </LinearGradient>
+               </TouchableOpacity>
+             )}
           </View>
           
           {/* Warning for multiplayer */}

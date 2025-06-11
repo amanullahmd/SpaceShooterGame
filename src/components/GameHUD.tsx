@@ -202,7 +202,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({ gameState, onPause, roomId }) 
       {/* Touch instruction */}
       <View style={styles.instructionContainer}>
         <Text style={styles.instructionText}>
-          Touch and drag to move • Touch to shoot
+          Touch and drag to move • Touch to shoot • ESC to pause/quit
         </Text>
       </View>
     </View>

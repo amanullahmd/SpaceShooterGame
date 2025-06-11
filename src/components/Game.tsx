@@ -91,6 +91,8 @@ export const Game: React.FC<GameProps> = ({
     };
   }, []);
 
+
+
   // Initialize multiplayer manager
   useEffect(() => {
     multiplayerManagerRef.current = new MultiplayerManager(MULTIPLAYER_CONFIG);
@@ -302,12 +304,51 @@ export const Game: React.FC<GameProps> = ({
     if (gameEngineRef.current) {
       gameEngineRef.current.stopGame();
     }
-    if (isMultiplayerMode && multiplayerManagerRef.current) {
-      multiplayerManagerRef.current.leaveRoom();
+    if (multiplayerManagerRef.current) {
+      multiplayerManagerRef.current.disconnect();
+    }
+    onBackToMenu?.();
+  }, [onBackToMenu]);
+
+  const quitGame = useCallback(() => {
+    if (gameEngineRef.current) {
+      gameEngineRef.current.stopGame();
+    }
+    if (multiplayerManagerRef.current) {
       multiplayerManagerRef.current.disconnect();
     }
     onExit?.();
-  }, [isMultiplayerMode, onExit]);
+  }, [onExit]);
+
+  // Handle keyboard shortcuts for quitting
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (gameState.gameStatus === GameStatus.PLAYING && !gameState.isPaused) {
+          // Pause the game first
+          pauseGame();
+        } else if (gameState.isPaused) {
+          // If already paused, show quit confirmation
+          Alert.alert(
+            'Quit Game',
+            'Are you sure you want to quit the current game?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Quit', style: 'destructive', onPress: quitGame },
+            ]
+          );
+        }
+      }
+    };
+
+    // Add event listener for web
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyPress);
+      return () => {
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+    }
+  }, [gameState.gameStatus, gameState.isPaused, pauseGame, quitGame]);
 
   // Render different screens based on game status
   const renderGameScreen = () => {
@@ -344,6 +385,7 @@ export const Game: React.FC<GameProps> = ({
               onRestart={restartGame}
               onMainMenu={exitToMenu}
               onSettings={() => {}}
+              onQuit={quitGame}
               isMultiplayer={gameState.isMultiplayer}
               gameStats={{
                 score: gameState.score,
